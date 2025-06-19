@@ -1,12 +1,17 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <LiquidCrystal_AIP31068_I2C.h>
+#include <LiquidCrystal_I2C.h>
+#include <RTClib.h>
+#include <SdFat.h>
 
 #define I2C_ADDRESS 0x27
-#define RCL_ADDRESS 0x68 
+#define SPI_SPEED SD_SCK_MHZ(4)
+#define CS_PIN 10
 
-LiquidCrystal_AIP31068_I2C lcd = LiquidCrystal_AIP31068_I2C(I2C_ADDRESS, 16, 2);
+SdFat sd;
 
+LiquidCrystal_I2C lcd = LiquidCrystal_I2C(I2C_ADDRESS, 16, 2);
+RTC_DS1307 rtc;
 
 float currentTemperature = 25; // Početna temperatura
 unsigned long long int time = 0;
@@ -44,10 +49,19 @@ void outputlcd(float currentTemp, float maxt, float mint) {
 void setup() {
   Serial.begin(9600);
   lcd.init();
+  // SETUP RTC MODULE
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+    while (1);
+  }
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
 }
 
 void loop() {
   time = millis();
+  DateTime now = rtc.now();
 
   if (time - temptimer >= 200) { //promjeni na neko normalno vreme
     currentTemperature = generateTemperature(currentTemperature);
@@ -55,17 +69,18 @@ void loop() {
   }
 
   if (currentTemperature > maxtemp) {
-        maxtemp = currentTemperature;
+      maxtemp = currentTemperature;
   } 
   else if (currentTemperature < mintemp) {
-        mintemp = currentTemperature;
+      mintemp = currentTemperature;
   } 
 
-
-
+  Serial.print(now.minute(), DEC);
+  Serial.print(":");
+  Serial.println  (now.second(), DEC);
+  
   // Ispiši temperaturu na LCD
   outputlcd(currentTemperature, maxtemp, mintemp);
 
 
 }
-
