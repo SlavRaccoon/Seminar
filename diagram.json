@@ -31,5 +31,6 @@
     [ "sd1:CD", "uno:9", "green", [ "h19.2", "v-297.6", "h211.2" ] ],
     [ "sd1:SCK", "uno:13", "green", [ "h38.4", "v-307.21", "h153.2" ] ]
   ],
-  "dependencies": {}
+  "dependencies": {},
+  "serialMonitor": { "display": "always"}
 }
