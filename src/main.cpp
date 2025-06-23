@@ -6,29 +6,28 @@
 #include <SPI.h>
 
 
+#define I2C_ADDRESS 0x27 //adresa LCD-a
+#define SPI_SPEED SD_SCK_MHZ(4) 
+#define CS_PIN 10 // Pin za CS (Chip Select) SD kartice
 
-#define I2C_ADDRESS 0x27
-#define SPI_SPEED SD_SCK_MHZ(4)
-#define CS_PIN 10
-
-File root;
+File direktorijat;
 File myFile;
 
-LiquidCrystal_I2C lcd = LiquidCrystal_I2C(I2C_ADDRESS, 16, 2);
-RTC_DS1307 rtc;
+LiquidCrystal_I2C lcd = LiquidCrystal_I2C(I2C_ADDRESS, 16, 2); // Inicijalizacija LCD-a
+RTC_DS1307 rtc; // stvaranje RTC objekta
 
 float currentTemperature = 25; // Početna temperatura
-unsigned long long int time = 0;
-unsigned long temptimer = 0; 
-unsigned long SDtimer = 0; // Promjeni na neko normalno vreme
+unsigned long long int time = 0; // Varijabla za vrijeme
+unsigned long temptimer = 0; //Vrijeme za generiranje temperature
+unsigned long SDtimer = 0; //Vrijeme za zapisivanje u SD karticu
 
-float maxtemp = 0;
-float mintemp = 2147483647;
+float maxtemp = 0; // Maksimalna temperatura
+float mintemp = 2147483647; // Minimalna temperatura
 
-String serialbuffer = ""; 
-char ulazniserial = ' ';
-String trentuniDir = "/";
-String Dirbuffer = "";
+String serialbuffer = "";  // Buffer za serijski unos
+char ulazniserial = ' '; // Ulazni serijski znak
+String trentuniDir = "/"; // Trenutni direktorij
+String Dirbuffer = ""; // Buffer za direktorij
 
 
 
@@ -42,13 +41,14 @@ float generateTemperature(float currentTemp) {
     return currentTemp;
 }
 
-void outputlcd(float currentTemp, float maxt, float mint) {
+void outputlcd(float currentTemp, float maxt, float mint) {// Ispisivanje na LCD
+    //prvi red
     lcd.setCursor(0, 0);
     lcd.print("Temp: ");
     lcd.print(currentTemperature);
     lcd.print(" C");
 
-    
+    // drugi red
     lcd.setCursor(0, 1);
     lcd.print(maxt);
     lcd.print("C | ");
@@ -56,26 +56,24 @@ void outputlcd(float currentTemp, float maxt, float mint) {
     lcd.print("C  ");
 }
 
-void printDirectory(File dir) {
+void printDirectory(File dir) { // Funkcija za ispis direktorija
   while (true) {
     File baffer =  dir.openNextFile();
-    Serial.println("radim i dalje");
     
     if (! baffer) {
       break;
-      Serial.println("radim i dalje");
     }
-    Serial.println("radim i dalje");
     Serial.print(baffer.name());
     if (baffer.isDirectory()) {
-      Serial.println("/");
+      Serial.print("/");
     }
+    Serial.println("");
     baffer.close();
   }
 }
 
-void outputSDfile(String dir, float tp, DateTime vrijeme) {
-  File radni;
+void outputSDfile(String dir, float tp, DateTime vrijeme) { // Funkcija za ispisivanje u SD karticu
+  File radni; // Deklaracija varijable za radni file
   radni = SD.open(dir, FILE_WRITE);
   radni.print(vrijeme.year());
   radni.print(":");
@@ -96,97 +94,48 @@ void outputSDfile(String dir, float tp, DateTime vrijeme) {
 }
 
 void setup() {
-  Serial.begin(9600);
-  lcd.init();
+  Serial.begin(9600); // Inicijalizacija serijskog porta
+  lcd.init(); // Inicijalizacija LCD-a
 
-  if (! rtc.begin()) {
+  if (! rtc.begin()) { // Inicijalizacija RTC-a
     Serial.flush();
     while (1);
   }
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Postavljanje RTC-a na vrijeme kompajliranja
 
 
-  if (!SD.begin(CS_PIN)) {
+  if (!SD.begin(CS_PIN)) { // Inicijalizacija SD kartice
     Serial.println("Card initialization failed!");
     while (true);
   }
 
-  if (!SD.exists("/templog"))
+  if (!SD.exists("/templog")) // Stvaranje direktorija za logove ako ne postoji
   {
     SD.mkdir("/templog");
   }
-  myFile = SD.open("templog/templog.txt", FILE_WRITE);
+  myFile = SD.open("templog/templog.txt", FILE_WRITE); //stvaranje datoteke za logove
   myFile.println("Datum i vrijeme | Temperatura");
   myFile.close();
   
-  Serial.println("Komande:");
-  //Serial.println("LS - listanje direktorija");
-  //Serial.println("CD <direktorij> - promjena direktorija");
-  //Serial.println("OP <file> - otvaranje datoteke");
-  //Serial.println("TMP - trenutna temperatura");
-  //Serial.println("MAX - maksimalna temperatura");
-  //Serial.println("MIN - minimalna temperatura");
-  /*
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  myFile = SD.open("test.txt", FILE_WRITE);
-  myFile.close();
-  myFile = SD.open("templog/test.txt", FILE_WRITE);
-  myFile.close();
-  /*
-  // if the file opened okay, write to it:
-  if (myFile) {
-    Serial.print("Writing to test.txt...");
-    myFile.println("testing 1, 2, 3.");
-    // close the file:
-    myFile.close();
-    Serial.println("done.");
-  } else {
-    // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
-  }
-
-  // re-open the file for reading:
-  myFile = SD.open("test.txt");
-  if (myFile) {
-    Serial.println("test.txt:");
-
-    // read from the file until there's nothing else in it:
-    while (myFile.available()) {
-      Serial.write(myFile.read());
-    }
-    // close the file:
-    myFile.close();
-  } else {
-    // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
-  }
-
-  Serial.println("Files in the card:");
-  root = SD.open("/");
-  printDirectory(root);
-  Serial.println("");
-*/
 }
 
 void loop() {
-  time = millis();
-  DateTime now = rtc.now();
+  time = millis(); // Dohvaćanje trenutnog vremena u milisekundama
+  DateTime now = rtc.now(); // Dohvaćanje trenutnog vremena s RTC-a
 
-  if (time - temptimer >= 200) { //promjeni na neko normalno vreme
+  if (time - temptimer >= 2000) { // Generiranje nove temperature
     currentTemperature = generateTemperature(currentTemperature);
     temptimer = time;
   }
 
-  if (currentTemperature > maxtemp) {
+  if (currentTemperature > maxtemp) { // Provjera maksimalne temperature
       maxtemp = currentTemperature;
   } 
-  else if (currentTemperature < mintemp) {
+  else if (currentTemperature < mintemp) { // Provjera minimalne temperature
       mintemp = currentTemperature;
   } 
   
-    // Ispiši temperaturu na LCD
-  outputlcd(currentTemperature, maxtemp, mintemp);
+  outputlcd(currentTemperature, maxtemp, mintemp); // Ispisivanje trenutne temperature na LCD
 
   if (Serial.available() > 0) { //Citanje serijskog porta i komande
     while (Serial.available() > 0) {
@@ -198,10 +147,9 @@ void loop() {
         Serial.println(serialbuffer);
 
         if (serialbuffer[0] == 'L' && serialbuffer[1] == 'S'){ // Listanje direktorija
-          root = SD.open(trentuniDir);
-          printDirectory(root);
-          root.close();
-          Serial.println("LS radi");
+          direktorijat = SD.open(trentuniDir);
+          printDirectory(direktorijat);
+          direktorijat.close();
         }
         
         if (serialbuffer[0] == 'C' && serialbuffer[1] == 'D'){ // Promjena direktorija
@@ -216,7 +164,7 @@ void loop() {
             }
           }
 
-          else if (Dirbuffer[0] == '/') { //provjera jel idemo od početka ili relativno
+          else if (Dirbuffer[0] == '/') { //provjera jel apsolutno ili relativno
             if (SD.exists(Dirbuffer) || Dirbuffer == "/")
             {
               trentuniDir = Dirbuffer;
@@ -242,7 +190,7 @@ void loop() {
           Serial.println(trentuniDir);
         }
 
-        if (serialbuffer[0] == 'O' && serialbuffer[1] == 'P'){ // Otvaranje file
+        if (serialbuffer[0] == 'O' && serialbuffer[1] == 'P'){ // Otvaranje datoteke
           Dirbuffer = serialbuffer.substring(3);
             Serial.println(trentuniDir + Dirbuffer);
           if (SD.exists(trentuniDir + Dirbuffer)) {
@@ -252,7 +200,7 @@ void loop() {
             }
             myFile.close();
           } else {
-            Serial.println("File ne postoji.");
+            Serial.println("Datoteka ne postoji.");
           }
         }
 
@@ -276,13 +224,13 @@ void loop() {
   }
 
 
-  if (now.second() == 0 && SDtimer + 5000 < time) // zapisivanje u SD karticu, stavi da ide svaku minutu ili tako nesto
+  if (now.second() == 0 && SDtimer + 5000 < time) // zapisivanje u SD karticu
   { 
     SDtimer = time;
     if (SD.exists("/templog/templog.txt")) {
       outputSDfile("/templog/templog.txt", currentTemperature, now);
     } else {
-      Serial.println("Nema taj file.");
+      Serial.println("Nema datoteke.");
     }
   }
 
